@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Sonuçlar - {{ keyword }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+        a {
+            color: blue;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        #download-btn,
+        #new-search-btn {
+            margin-top: 20px;
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        #download-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #download-btn:hover {
+            background-color: #45a049;
+        }
+
+        #new-search-btn {
+            background-color: #007BFF;
+            color: white;
+            margin-left: 10px;
+        }
+
+        #new-search-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Sonuçlar: {{ keyword }}</h1>
+
+    <table id="results-table">
+        <thead>
+            <tr>
+                <th>Firma Adı</th>
+                <th>Adres</th>
+                <th>Telefon</th>
+                <th>Email</th>
+                <th>Website</th>
+                <th>URL</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <button id="download-btn" onclick="downloadCSV()">Excel'i İndir</button>
+    <button id="new-search-btn" onclick="window.location.href='/'">Yeni Arama</button>
+
+    <script>
+        const source = new EventSource("/stream/{{ keyword }}");
+        const tbody = document.querySelector("#results-table tbody");
+        const rowsData = [];
+
+        source.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+
+            const telefon = data["Telefon"] && data["Telefon"].length ? data["Telefon"].join(", ") : "Yok";
+            const email = data["Email"] && data["Email"].length ? data["Email"].join(", ") : "Yok";
+            const website = data["Website"] && data["Website"].length ? data["Website"].join(", ") : "Yok";
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${data["Firma Adı"] || "Yok"}</td>
+                <td>${data["Adres"] || "Yok"}</td>
+                <td>${telefon}</td>
+                <td>${email}</td>
+                <td>${website}</td>
+                <td><a href="${data["URL"]}" target="_blank">Link</a></td>
+            `;
+            tbody.appendChild(row);
+
+            rowsData.push({
+                "Firma Adı": data["Firma Adı"] || "Yok",
+                "Adres": data["Adres"] || "Yok",
+                "Telefon": telefon,
+                "Email": email,
+                "Website": website,
+                "URL": data["URL"] || "Yok"
+            });
+        }
+
+        function downloadCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Firma Adı,Adres,Telefon,Email,Website,URL\n";
+
+            rowsData.forEach(row => {
+                const line = [
+                    row["Firma Adı"],
+                    row["Adres"],
+                    `"${row["Telefon"]}"`,
+                    `"${row["Email"]}"`,
+                    `"${row["Website"]}"`,
+                    row["URL"]
+                ].join(",");
+                csvContent += line + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "{{ keyword }}_results.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+
+</html>
