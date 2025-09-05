@@ -2,18 +2,6 @@ Flask==3.0.3
 selenium==4.23.1
 webdriver-manager==4.0.1
 Scrapy==2.13.3
-# Aşağıdakiler Scrapy/SSL ekosisteminde işlerini kolaylaştırır
 cryptography>=42.0.0
 pyOpenSSL>=23.2.0
-gunicorn
-scrapy
-selenium
-webdriver-manager
-flask
-fastapi
-uvicorn
-Flask==2.3.5
 gunicorn==23.0.0
-scrapy==2.8.0
-selenium==4.16.0
-webdriver-manager==3.8.7

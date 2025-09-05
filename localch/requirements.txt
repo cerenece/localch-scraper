@@ -1,6 +1,0 @@
-scrapy
-selenium
-webdriver-manager
-flask
-fastapi
-uvicorn
