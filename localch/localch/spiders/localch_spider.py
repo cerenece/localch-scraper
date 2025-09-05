@@ -37,14 +37,14 @@ class LocalchSeleniumSpider(scrapy.Spider):
         options.add_argument("--no-zygote")            # 🔑 Zygote process kapalı
         options.add_argument("--disable-features=SitePerProcess") # 🔑 Tab crash azaltır
 
-    self.driver = webdriver.Chrome(
-        service=Service(os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")),
-        options=options
-    )
-    self.wait = WebDriverWait(self.driver, 10)
-
-    start_url = f"https://www.local.ch/de/s/{self.keyword}?what={self.keyword}"
-    yield scrapy.Request(url=start_url, callback=self.parse)
+        self.driver = webdriver.Chrome(
+            service=Service(os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")),
+            options=options
+        )
+        self.wait = WebDriverWait(self.driver, 10)
+    
+        start_url = f"https://www.local.ch/de/s/{self.keyword}?what={self.keyword}"
+        yield scrapy.Request(url=start_url, callback=self.parse)
 
     def parse(self, response):
         self.driver.get(response.url)
