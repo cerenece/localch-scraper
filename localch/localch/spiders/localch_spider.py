@@ -31,9 +31,18 @@ class LocalchSeleniumSpider(scrapy.Spider):
         options.add_argument("--ignore-certificate-errors")
     
         
-        self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        # Railway içindeki Chromium'un yolu
+        options.binary_location = "/usr/bin/chromium"
+
+        # ChromeDriver'ı da elle gösteriyoruz
+        self.driver = webdriver.Chrome(
+        service=Service("/usr/bin/chromedriver"),  # railway’de chromium-driver yolu
+        options=options
+        )
+
+        
         self.wait = WebDriverWait(self.driver, 10)
-    
+        
         start_url = f"https://www.local.ch/de/s/{self.keyword}?what={self.keyword}"
         yield scrapy.Request(url=start_url, callback=self.parse)
 
