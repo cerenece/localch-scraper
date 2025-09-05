@@ -31,6 +31,7 @@ class LocalchSeleniumSpider(scrapy.Spider):
         options.add_argument("--disable-translate")
         options.add_argument("--disable-features=VizDisplayCompositor")
         options.binary_location = "/usr/bin/chromium"
+        
 
         # Railway’de driver path
         self.driver = webdriver.Chrome(
