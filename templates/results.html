@@ -1,41 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sonuçlar - {{ keyword }}</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 20px;
+            background-color: #f4f6f8;
         }
 
         h1 {
             color: #333;
+            text-align: center;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
 
         th,
         td {
-            border: 1px solid #ccc;
-            padding: 8px;
+            border: 1px solid #ddd;
+            padding: 10px 12px;
             text-align: left;
         }
 
         th {
-            background-color: #f2f2f2;
+            background-color: #4CAF50;
+            color: white;
         }
 
         tr:nth-child(even) {
-            background-color: #fafafa;
+            background-color: #f9f9f9;
         }
 
         a {
-            color: blue;
+            color: #007BFF;
             text-decoration: none;
         }
 
@@ -43,13 +54,18 @@
             text-decoration: underline;
         }
 
-        #download-btn,
-        #new-search-btn {
+        .btn-container {
             margin-top: 20px;
-            padding: 10px 15px;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 20px;
             border: none;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin: 5px;
         }
 
         #download-btn {
@@ -64,7 +80,6 @@
         #new-search-btn {
             background-color: #007BFF;
             color: white;
-            margin-left: 10px;
         }
 
         #new-search-btn:hover {
@@ -76,23 +91,27 @@
 <body>
     <h1>Sonuçlar: {{ keyword }}</h1>
 
-    <table id="results-table">
-        <thead>
-            <tr>
-                <th>Firma Adı</th>
-                <th>Adres</th>
-                <th>Telefon</th>
-                <th>Email</th>
-                <th>Website</th>
-                <th>URL</th>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
+    <div class="table-container">
+        <table id="results-table">
+            <thead>
+                <tr>
+                    <th>Firma Adı</th>
+                    <th>Adres</th>
+                    <th>Telefon</th>
+                    <th>Email</th>
+                    <th>Website</th>
+                    <th>URL</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
 
-    <button id="download-btn" onclick="downloadCSV()">Excel'i İndir</button>
-    <button id="new-search-btn" onclick="window.location.href='/'">Yeni Arama</button>
+    <div class="btn-container">
+        <button id="download-btn" onclick="downloadCSV()">Excel'i İndir</button>
+        <button id="new-search-btn" onclick="window.location.href='/'">Yeni Arama</button>
+    </div>
 
     <script>
         const source = new EventSource("/stream/{{ keyword }}");

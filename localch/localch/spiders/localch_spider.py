@@ -11,24 +11,24 @@ import os
 class LocalchSeleniumSpider(scrapy.Spider):
     name = "localch"
 
-    def __init__(self, keyword=None, *args, **kwargs):
+    def __init__(self, keyword=None, results_queue=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not keyword:
             raise ValueError("Keyword parametresi gerekli!")
         self.keyword = keyword
+        self.results_queue = results_queue
 
     def start_requests(self):
         from selenium.webdriver.chrome.options import Options
 
         chrome_options = Options()
-        chrome_options.add_argument("--headless=new")  # Chrome 109+ uyumlu
+        chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument("--disable-features=NetworkService")
         chrome_options.add_argument("--ignore-certificate-errors")
-        chrome_options.add_argument("--remote-debugging-port=9222")
         chrome_options.binary_location = "/usr/bin/chromium"
 
         self.driver = webdriver.Chrome(
@@ -56,7 +56,6 @@ class LocalchSeleniumSpider(scrapy.Spider):
 
         page_count = 1
         while True:
-            print(f"\n--- Sayfa {page_count} ---")
             articles = self.driver.find_elements(By.CSS_SELECTOR, "div.kg a")
             detail_links = [a.get_attribute("href") for a in articles]
 
@@ -107,8 +106,19 @@ class LocalchSeleniumSpider(scrapy.Spider):
                     "URL": link
                 }
 
-                print(json.dumps(result, ensure_ascii=False))
-                yield result
+                # Queue'ya ekle
+                if self.results_queue:
+                    self.results_queue.put(result)
+
+                # CSV kaydı
+                csv_file = f"/app/results/{self.keyword}_results.csv"
+                write_header = not os.path.exists(csv_file)
+                with open(csv_file, "a", newline="", encoding="utf-8") as f:
+                    writer = csv.DictWriter(f, fieldnames=["Firma Adı", "Adres", "Telefon", "Email", "Website", "URL"])
+                    if write_header:
+                        writer.writeheader()
+                    writer.writerow(result)
+                    f.flush()
 
             try:
                 next_button = self.driver.find_element(By.ID, "load-next-page")
@@ -117,7 +127,6 @@ class LocalchSeleniumSpider(scrapy.Spider):
                 page_count += 1
                 time.sleep(3)
             except:
-                print("Son sayfaya ulaşıldı veya next buton bulunamadı.")
                 break
 
         self.driver.quit()

@@ -7,8 +7,8 @@ from localch_spider import LocalchSeleniumSpider
 
 app = Flask(__name__)
 
-# Thread-safe queue
-results_queue = queue.Queue()
+# Keyword bazlı thread-safe queue'lar
+queues_dict = {}
 
 # CSV'lerin kaydedileceği klasör (container içinde /app/results)
 RESULTS_DIR = "/app/results"
@@ -19,37 +19,15 @@ def run_spider(keyword):
     """
     Thread içinde çalışan spider fonksiyonu.
     """
-    spider = LocalchSeleniumSpider(keyword=keyword)
+    if keyword not in queues_dict:
+        queues_dict[keyword] = queue.Queue()
 
-    # start_requests generator’ını al
-    start_requests = spider.start_requests()
+    spider = LocalchSeleniumSpider(keyword=keyword, results_queue=queues_dict[keyword])
 
-    for request in start_requests:
-        for item in spider.parse(request):
-            # Queue'ya ekle
-            results_queue.put(item)
-
-            # CSV kaydı
-            csv_file = os.path.join(RESULTS_DIR, f"{keyword}_results.csv")
-            write_header = not os.path.exists(csv_file)
-
-            with open(csv_file, "a", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(
-                    f,
-                    fieldnames=["Firma Adı", "Adres", "Telefon", "Email", "Website", "URL"]
-                )
-                if write_header:
-                    writer.writeheader()
-
-                writer.writerow({
-                    "Firma Adı": item.get("Firma Adı", "Yok"),
-                    "Adres": item.get("Adres", "Yok"),
-                    "Telefon": ",".join(item.get("Telefon", [])),
-                    "Email": ",".join(item.get("Email", [])),
-                    "Website": ",".join(item.get("Website", [])),
-                    "URL": item.get("URL", "Yok")
-                })
-                f.flush()  # anlık yazdırma
+    for request_obj in spider.start_requests():
+        for _ in spider.parse(request_obj):
+            # Spider içinde queue ve CSV işlemleri yapılıyor
+            pass
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -57,9 +35,8 @@ def index():
     if request.method == "POST":
         keyword = request.form["keyword"]
 
-        # Spider'ı ayrı thread'te başlat
         thread = threading.Thread(target=run_spider, args=(keyword,))
-        thread.daemon = True  # Container kapanırken thread kapanır
+        thread.daemon = True
         thread.start()
 
         return render_template("results.html", keyword=keyword)
@@ -72,9 +49,12 @@ def stream(keyword):
     Frontend için server-sent events (SSE) stream.
     """
     def event_stream():
+        if keyword not in queues_dict:
+            queues_dict[keyword] = queue.Queue()
+
         while True:
             try:
-                item = results_queue.get_nowait()
+                item = queues_dict[keyword].get_nowait()
                 yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
             except queue.Empty:
                 time.sleep(1)
@@ -84,9 +64,6 @@ def stream(keyword):
 
 @app.route("/download/<keyword>")
 def download_csv(keyword):
-    """
-    Kullanıcıya CSV dosyasını indirme imkanı sağlar.
-    """
     filename = f"{keyword}_results.csv"
     filepath = os.path.join(RESULTS_DIR, filename)
 
@@ -97,6 +74,4 @@ def download_csv(keyword):
 
 
 if __name__ == "__main__":
-    # Flask'ı production-ready çalıştırmak için gunicorn kullanıyoruz,
-    # ama debug=False ile local test için de çalışır
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
