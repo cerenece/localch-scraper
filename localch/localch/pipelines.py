@@ -15,12 +15,13 @@ class LocalchPipeline:
 
     def process_item(self, item, spider):
         self.writer.writerow({
-            "Firma Adı": item.get("Firma Adı", "Yok"),
+            "Firma Adı": item.get("Firma_Adi", "Yok"),
             "Adres": item.get("Adres", "Yok"),
             "Telefon": item.get("Telefon", "Yok"),
             "Email": item.get("Email", "Yok"),
             "Website": item.get("Website", "Yok"),
             "URL": item.get("URL", "Yok"),
         })
+
         self.file.flush()  # her satırdan sonra anlık yazdır
         return item
