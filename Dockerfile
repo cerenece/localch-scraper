@@ -41,7 +41,8 @@ ENV CHROMIUM_PATH=/usr/bin/chromium
 ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
 # Portu aç
-EXPOSE 5000
+EXPOSE 8080
 
-# Gunicorn ile uygulamayı çalıştır (timeout 300s)
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "--timeout", "300", "app:app"]
+# Container çalıştırılırken shared memory artır
+# docker run --shm-size=2g -p 5000:5000 my-flask-app
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]

@@ -4,17 +4,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
-from pprint import pprint
 import time
-import json  # JSON çıktısı için
-import os
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
+import json
 
 class LocalchSeleniumSpider(scrapy.Spider):
     name = "localch"
@@ -27,27 +18,25 @@ class LocalchSeleniumSpider(scrapy.Spider):
 
     def start_requests(self):
         options = webdriver.ChromeOptions()
-        # Headless + Render/Railway uyumlu ayarlar
-        options.add_argument("--headless=new")
+        options.add_argument("--headless")  # eski headless
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-features=NetworkService")
         options.add_argument("--ignore-certificate-errors")
-
-        # Chromium ve ChromeDriver yolunu env değişkenlerinden al
-        options.binary_location = os.environ.get("CHROMIUM_PATH", "/usr/bin/chromium")
-        driver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
+        options.binary_location = "/usr/bin/chromium"
 
         self.driver = webdriver.Chrome(
-            service=Service(driver_path),
+            service=Service("/usr/bin/chromedriver"),
             options=options
         )
 
         self.wait = WebDriverWait(self.driver, 10)
+
         start_url = f"https://www.local.ch/de/s/{self.keyword}?what={self.keyword}"
         yield scrapy.Request(url=start_url, callback=self.parse)
+
     def parse(self, response):
         self.driver.get(response.url)
         time.sleep(2)
@@ -65,17 +54,14 @@ class LocalchSeleniumSpider(scrapy.Spider):
         page_count = 1
         while True:
             print(f"\n--- Sayfa {page_count} ---")
-
-            # Firma linklerini çek
             articles = self.driver.find_elements(By.CSS_SELECTOR, "div.kg a")
             detail_links = [a.get_attribute("href") for a in articles]
 
-            for idx, link in enumerate(detail_links, start=1):
-                self.driver.execute_script("window.open(arguments[0]);", link)
-                self.driver.switch_to.window(self.driver.window_handles[1])
+            for link in detail_links:
+                # Sekme açmayı kaldırdık
+                self.driver.get(link)
                 time.sleep(2)
 
-                # Firma bilgilerini al
                 try:
                     firma_adi = self.wait.until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, "h1[data-cy='header-title']"))
@@ -119,15 +105,8 @@ class LocalchSeleniumSpider(scrapy.Spider):
                     "URL": link
                 }
 
-                # Terminalde JSON olarak yazdır (Flask SSE için)
                 print(json.dumps(result, ensure_ascii=False))
-
-                # Scrapy'ye ilet (pipelines CSV’ye anlık yazacak)
                 yield result
-
-                self.driver.close()
-                self.driver.switch_to.window(self.driver.window_handles[0])
-                time.sleep(1)
 
             try:
                 next_button = self.driver.find_element(By.ID, "load-next-page")
