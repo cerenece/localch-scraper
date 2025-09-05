@@ -8,6 +8,10 @@ from localch_spider import LocalchSeleniumSpider
 app = Flask(__name__)
 results = []
 
+# CSV'lerin kaydedileceği klasör (container içinde /app/results)
+RESULTS_DIR = "/app/results"
+os.makedirs(RESULTS_DIR, exist_ok=True)
+
 def run_spider(keyword):
     """
     Thread içinde çalışan spider fonksiyonu.
@@ -25,7 +29,7 @@ def run_spider(keyword):
             results.append(item)
 
             # CSV kaydı
-            csv_file = f"{keyword}_results.csv"
+            csv_file = os.path.join(RESULTS_DIR, f"{keyword}_results.csv")
             write_header = not os.path.exists(csv_file)
 
             with open(csv_file, "a", newline="", encoding="utf-8") as f:
@@ -82,7 +86,7 @@ def download_csv(keyword):
     Kullanıcıya CSV dosyasını indirme imkanı sağlar.
     """
     filename = f"{keyword}_results.csv"
-    filepath = os.path.join(os.getcwd(), filename)
+    filepath = os.path.join(RESULTS_DIR, filename)
 
     if os.path.exists(filepath):
         return send_file(filepath, as_attachment=True)
