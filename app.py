@@ -1,6 +1,10 @@
 from flask import Flask, render_template, Response, request, send_file
 import threading, json, time, csv, os, queue
-from localch_spiders.localch_spider import LocalchSeleniumSpider
+from flask import Flask, render_template, Response, request
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "localch", "localch", "spiders"))
+from localch_spider import LocalchSeleniumSpider
+
 
 app = Flask(__name__)
 
