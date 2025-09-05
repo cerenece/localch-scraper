@@ -26,6 +26,9 @@ RUN mkdir -p /app/results
 ENV CHROMIUM_PATH=/usr/bin/chromium
 ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
 ENV PORT=5000
+ENV CHROME_HEADLESS=true
+
+
 
 # Port
 EXPOSE 5000
