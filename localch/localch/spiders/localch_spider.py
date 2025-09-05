@@ -19,29 +19,32 @@ class LocalchSeleniumSpider(scrapy.Spider):
     def start_requests(self):
         options = Options()
         options.binary_location = os.environ.get("CHROMIUM_PATH", "/usr/bin/chromium")
+    
+        # Railway optimizasyonları
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
-        options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-software-rasterizer")
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-background-networking")
         options.add_argument("--disable-sync")
         options.add_argument("--disable-translate")
         options.add_argument("--disable-features=VizDisplayCompositor")
-        options.binary_location = "/usr/bin/chromium"
-        
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--single-process")       # 🔑 RAM azaltıyor
+        options.add_argument("--disable-dev-tools")    # 🔑 DevTools kapalı
+        options.add_argument("--no-zygote")            # 🔑 Zygote process kapalı
+        options.add_argument("--disable-features=SitePerProcess") # 🔑 Tab crash azaltır
 
-        # Railway’de driver path
-        self.driver = webdriver.Chrome(
-            service=Service(os.environ.get("CHROMEDRIVER_PATH","/usr/bin/chromedriver")),
-            options=options
-        )
-        self.wait = WebDriverWait(self.driver,10)
+    self.driver = webdriver.Chrome(
+        service=Service(os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")),
+        options=options
+    )
+    self.wait = WebDriverWait(self.driver, 10)
 
-        start_url = f"https://www.local.ch/de/s/{self.keyword}?what={self.keyword}"
-        yield scrapy.Request(url=start_url, callback=self.parse)
+    start_url = f"https://www.local.ch/de/s/{self.keyword}?what={self.keyword}"
+    yield scrapy.Request(url=start_url, callback=self.parse)
 
     def parse(self, response):
         self.driver.get(response.url)
