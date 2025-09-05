@@ -36,12 +36,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Uygulamayı kopyala
 COPY . .
 
-# Chromium yolu environment olarak ekle (Selenium’da kullanacağız)
+# Chromium yolu environment olarak ekle
 ENV CHROMIUM_PATH=/usr/bin/chromium
 ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
 # Portu aç
-EXPOSE 8080
+EXPOSE 5000
 
-# Uygulamayı çalıştır
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
+# Gunicorn ile uygulamayı çalıştır (timeout 300s)
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "--timeout", "300", "app:app"]

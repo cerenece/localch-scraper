@@ -8,6 +8,13 @@ from webdriver_manager.chrome import ChromeDriverManager
 from pprint import pprint
 import time
 import json  # JSON çıktısı için
+import os
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 
 class LocalchSeleniumSpider(scrapy.Spider):
     name = "localch"
@@ -20,32 +27,27 @@ class LocalchSeleniumSpider(scrapy.Spider):
 
     def start_requests(self):
         options = webdriver.ChromeOptions()
-         # Headless + Render uyumlu ayarlar
+        # Headless + Render/Railway uyumlu ayarlar
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=1920,1080")
-        # Daha stabil olması için
         options.add_argument("--disable-features=NetworkService")
         options.add_argument("--ignore-certificate-errors")
-    
-        
-        # Railway içindeki Chromium'un yolu
-        options.binary_location = "/usr/bin/chromium"
 
-        # ChromeDriver'ı da elle gösteriyoruz
+        # Chromium ve ChromeDriver yolunu env değişkenlerinden al
+        options.binary_location = os.environ.get("CHROMIUM_PATH", "/usr/bin/chromium")
+        driver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
+
         self.driver = webdriver.Chrome(
-        service=Service("/usr/bin/chromedriver"),  # railway’de chromium-driver yolu
-        options=options
+            service=Service(driver_path),
+            options=options
         )
 
-        
         self.wait = WebDriverWait(self.driver, 10)
-        
         start_url = f"https://www.local.ch/de/s/{self.keyword}?what={self.keyword}"
         yield scrapy.Request(url=start_url, callback=self.parse)
-
     def parse(self, response):
         self.driver.get(response.url)
         time.sleep(2)
