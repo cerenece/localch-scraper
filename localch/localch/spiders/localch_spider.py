@@ -6,6 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import json
+import os
 
 class LocalchSeleniumSpider(scrapy.Spider):
     name = "localch"
@@ -17,21 +18,23 @@ class LocalchSeleniumSpider(scrapy.Spider):
         self.keyword = keyword
 
     def start_requests(self):
-        options = webdriver.ChromeOptions()
-        options.add_argument("--headless")  # eski headless
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--window-size=1920,1080")
-        options.add_argument("--disable-features=NetworkService")
-        options.add_argument("--ignore-certificate-errors")
-        options.binary_location = "/usr/bin/chromium"
+        from selenium.webdriver.chrome.options import Options
+
+        chrome_options = Options()
+        chrome_options.add_argument("--headless=new")  # Chrome 109+ uyumlu
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("--disable-features=NetworkService")
+        chrome_options.add_argument("--ignore-certificate-errors")
+        chrome_options.add_argument("--remote-debugging-port=9222")
+        chrome_options.binary_location = "/usr/bin/chromium"
 
         self.driver = webdriver.Chrome(
-            service=Service("/usr/bin/chromedriver"),
-            options=options
+            service=Service(os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")),
+            options=chrome_options
         )
-
         self.wait = WebDriverWait(self.driver, 10)
 
         start_url = f"https://www.local.ch/de/s/{self.keyword}?what={self.keyword}"
@@ -58,7 +61,6 @@ class LocalchSeleniumSpider(scrapy.Spider):
             detail_links = [a.get_attribute("href") for a in articles]
 
             for link in detail_links:
-                # Sekme açmayı kaldırdık
                 self.driver.get(link)
                 time.sleep(2)
 

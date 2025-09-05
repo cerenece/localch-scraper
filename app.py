@@ -1,24 +1,24 @@
 from flask import Flask, render_template, Response, request, send_file
-import threading, json, time, csv, os, sys
+import threading, json, time, csv, os, sys, queue
 
 # localch_spider.py'nin yolu
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "localch", "localch", "spiders"))
 from localch_spider import LocalchSeleniumSpider
 
 app = Flask(__name__)
-results = []
+
+# Thread-safe queue
+results_queue = queue.Queue()
 
 # CSV'lerin kaydedileceği klasör (container içinde /app/results)
 RESULTS_DIR = "/app/results"
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
+
 def run_spider(keyword):
     """
     Thread içinde çalışan spider fonksiyonu.
     """
-    global results
-    results = []
-
     spider = LocalchSeleniumSpider(keyword=keyword)
 
     # start_requests generator’ını al
@@ -26,7 +26,8 @@ def run_spider(keyword):
 
     for request in start_requests:
         for item in spider.parse(request):
-            results.append(item)
+            # Queue'ya ekle
+            results_queue.put(item)
 
             # CSV kaydı
             csv_file = os.path.join(RESULTS_DIR, f"{keyword}_results.csv")
@@ -50,6 +51,7 @@ def run_spider(keyword):
                 })
                 f.flush()  # anlık yazdırma
 
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -70,13 +72,13 @@ def stream(keyword):
     Frontend için server-sent events (SSE) stream.
     """
     def event_stream():
-        last_len = 0
         while True:
-            if len(results) > last_len:
-                for item in results[last_len:]:
-                    yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
-                last_len = len(results)
-            time.sleep(1)
+            try:
+                item = results_queue.get_nowait()
+                yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
+            except queue.Empty:
+                time.sleep(1)
+
     return Response(event_stream(), mimetype="text/event-stream")
 
 
