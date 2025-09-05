@@ -24,6 +24,12 @@ class LocalchSeleniumSpider(scrapy.Spider):
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-software-rasterizer")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-background-networking")
+        options.add_argument("--disable-sync")
+        options.add_argument("--disable-translate")
+        options.add_argument("--disable-features=VizDisplayCompositor")
         options.binary_location = "/usr/bin/chromium"
 
         # Railway’de driver path
