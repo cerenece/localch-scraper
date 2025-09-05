@@ -1,7 +1,5 @@
 Flask==2.3.3
 selenium==4.17.0
-webdriver-manager==4.0.1webdriver-manager==3.8.6Scrapy==2.13.3
-cryptography>=42.0.0
-pyOpenSSL>=23.2.0
-scrapy==2.13.3
+webdriver-manager==3.8.6
+Scrapy==2.13.3
 gunicorn==21.2.0
