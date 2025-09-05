@@ -1,10 +1,14 @@
 import scrapy
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time, json, os
+from webdriver_manager.chrome import ChromeDriverManager
+from pprint import pprint
+import time
+import json
 
 class LocalchSeleniumSpider(scrapy.Spider):
     name = "localch"
@@ -16,22 +20,18 @@ class LocalchSeleniumSpider(scrapy.Spider):
         self.keyword = keyword
 
     def start_requests(self):
-        from selenium.webdriver.chrome.options import Options
+        options = Options()
+        options.add_argument("--headless=new")  # Headless mod
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--window-size=1920,1080")
 
-        chrome_options = Options()
-        chrome_options.add_argument("--headless=new")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")  # /dev/shm problemi için
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--disable-software-rasterizer")
-        chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.add_argument("--remote-debugging-port=9222")
-        chrome_options.binary_location = os.environ.get("CHROMIUM_PATH", "/usr/bin/chromium")
-
+        # ChromeDriverManager otomatik driver indirir ve kurar
         self.driver = webdriver.Chrome(
-            service=Service(os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")),
-            options=chrome_options
+            service=Service(ChromeDriverManager().install()),
+            options=options
         )
         self.wait = WebDriverWait(self.driver, 10)
 
@@ -42,6 +42,7 @@ class LocalchSeleniumSpider(scrapy.Spider):
         self.driver.get(response.url)
         time.sleep(2)
 
+        # Çerez popup varsa kapat
         try:
             cookie_button = self.wait.until(
                 EC.element_to_be_clickable((By.ID, "onetrust-accept-btn-handler"))
@@ -53,13 +54,19 @@ class LocalchSeleniumSpider(scrapy.Spider):
 
         page_count = 1
         while True:
+            print(f"\n--- Sayfa {page_count} ---")
+
+            # Firma linklerini çek
             articles = self.driver.find_elements(By.CSS_SELECTOR, "div.kg a")
             detail_links = [a.get_attribute("href") for a in articles]
 
             for link in detail_links:
-                self.driver.get(link)
+                # Yeni tab aç ve geçiş yap
+                self.driver.execute_script("window.open(arguments[0]);", link)
+                self.driver.switch_to.window(self.driver.window_handles[1])
                 time.sleep(2)
 
+                # Firma bilgilerini al
                 try:
                     firma_adi = self.wait.until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, "h1[data-cy='header-title']"))
@@ -70,7 +77,11 @@ class LocalchSeleniumSpider(scrapy.Spider):
                 try:
                     adres = self.driver.find_element(By.CSS_SELECTOR, "address").text.strip()
                 except:
-                    adres = "Yok"
+                    try:
+                        adres_elem = self.driver.find_element(By.CSS_SELECTOR, "div[data-cy='detail-map-preview'] button")
+                        adres = adres_elem.text.strip()
+                    except:
+                        adres = "Yok"
 
                 try:
                     telefon_elems = self.driver.find_elements(By.CSS_SELECTOR, "li.r2 a[href^='tel:']")
@@ -102,6 +113,12 @@ class LocalchSeleniumSpider(scrapy.Spider):
                 print(json.dumps(result, ensure_ascii=False))
                 yield result
 
+                # Tabı kapat ve ana sekmeye dön
+                self.driver.close()
+                self.driver.switch_to.window(self.driver.window_handles[0])
+                time.sleep(1)
+
+            # Sonraki sayfa
             try:
                 next_button = self.driver.find_element(By.ID, "load-next-page")
                 self.driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
@@ -109,6 +126,7 @@ class LocalchSeleniumSpider(scrapy.Spider):
                 page_count += 1
                 time.sleep(3)
             except:
+                print("Son sayfaya ulaşıldı veya next buton bulunamadı.")
                 break
 
         self.driver.quit()
