@@ -4,19 +4,16 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
-import json
-import os
+import time, json, os
 
 class LocalchSeleniumSpider(scrapy.Spider):
     name = "localch"
 
-    def __init__(self, keyword=None, results_queue=None, *args, **kwargs):
+    def __init__(self, keyword=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not keyword:
             raise ValueError("Keyword parametresi gerekli!")
         self.keyword = keyword
-        self.results_queue = results_queue
 
     def start_requests(self):
         from selenium.webdriver.chrome.options import Options
@@ -29,7 +26,7 @@ class LocalchSeleniumSpider(scrapy.Spider):
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument("--disable-features=NetworkService")
         chrome_options.add_argument("--ignore-certificate-errors")
-        chrome_options.binary_location = "/usr/bin/chromium"
+        chrome_options.binary_location = os.environ.get("CHROMIUM_PATH", "/usr/bin/chromium")
 
         self.driver = webdriver.Chrome(
             service=Service(os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")),
@@ -44,7 +41,6 @@ class LocalchSeleniumSpider(scrapy.Spider):
         self.driver.get(response.url)
         time.sleep(2)
 
-        # Çerez popup varsa kapat
         try:
             cookie_button = self.wait.until(
                 EC.element_to_be_clickable((By.ID, "onetrust-accept-btn-handler"))
@@ -73,11 +69,7 @@ class LocalchSeleniumSpider(scrapy.Spider):
                 try:
                     adres = self.driver.find_element(By.CSS_SELECTOR, "address").text.strip()
                 except:
-                    try:
-                        adres_elem = self.driver.find_element(By.CSS_SELECTOR, "div[data-cy='detail-map-preview'] button")
-                        adres = adres_elem.text.strip()
-                    except:
-                        adres = "Yok"
+                    adres = "Yok"
 
                 try:
                     telefon_elems = self.driver.find_elements(By.CSS_SELECTOR, "li.r2 a[href^='tel:']")
@@ -106,19 +98,8 @@ class LocalchSeleniumSpider(scrapy.Spider):
                     "URL": link
                 }
 
-                # Queue'ya ekle
-                if self.results_queue:
-                    self.results_queue.put(result)
-
-                # CSV kaydı
-                csv_file = f"/app/results/{self.keyword}_results.csv"
-                write_header = not os.path.exists(csv_file)
-                with open(csv_file, "a", newline="", encoding="utf-8") as f:
-                    writer = csv.DictWriter(f, fieldnames=["Firma Adı", "Adres", "Telefon", "Email", "Website", "URL"])
-                    if write_header:
-                        writer.writeheader()
-                    writer.writerow(result)
-                    f.flush()
+                print(json.dumps(result, ensure_ascii=False))
+                yield result
 
             try:
                 next_button = self.driver.find_element(By.ID, "load-next-page")

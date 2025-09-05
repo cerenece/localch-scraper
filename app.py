@@ -22,12 +22,34 @@ def run_spider(keyword):
     if keyword not in queues_dict:
         queues_dict[keyword] = queue.Queue()
 
-    spider = LocalchSeleniumSpider(keyword=keyword, results_queue=queues_dict[keyword])
+    spider = LocalchSeleniumSpider(keyword=keyword)
 
-    for request_obj in spider.start_requests():
-        for _ in spider.parse(request_obj):
-            # Spider içinde queue ve CSV işlemleri yapılıyor
-            pass
+    start_requests = spider.start_requests()
+
+    for request_obj in start_requests:
+        for item in spider.parse(request_obj):
+            queues_dict[keyword].put(item)
+
+            csv_file = os.path.join(RESULTS_DIR, f"{keyword}_results.csv")
+            write_header = not os.path.exists(csv_file)
+
+            with open(csv_file, "a", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=["Firma Adı", "Adres", "Telefon", "Email", "Website", "URL"]
+                )
+                if write_header:
+                    writer.writeheader()
+
+                writer.writerow({
+                    "Firma Adı": item.get("Firma Adı", "Yok"),
+                    "Adres": item.get("Adres", "Yok"),
+                    "Telefon": ",".join(item.get("Telefon", [])),
+                    "Email": ",".join(item.get("Email", [])),
+                    "Website": ",".join(item.get("Website", [])),
+                    "URL": item.get("URL", "Yok")
+                })
+                f.flush()
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -46,7 +68,7 @@ def index():
 @app.route("/stream/<keyword>")
 def stream(keyword):
     """
-    Frontend için server-sent events (SSE) stream.
+    Server-Sent Events ile frontend’e anlık veri gönderimi.
     """
     def event_stream():
         if keyword not in queues_dict:
