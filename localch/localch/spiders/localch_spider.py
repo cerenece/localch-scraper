@@ -4,7 +4,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 from pprint import pprint
 import time
 
@@ -19,10 +18,21 @@ class LocalchSeleniumSpider(scrapy.Spider):
 
     def start_requests(self):
         options = webdriver.ChromeOptions()
+        # Eğer GUI açık olacaksa headless'i kaldırabilirsin
+        # options.add_argument("--headless")  
         options.add_argument("--start-maximized")
-        self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        self.wait = WebDriverWait(self.driver, 10)
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1920,1080")
 
+        # Windows yolu ile ChromeDriver'ı başlat
+        driver_path = r"C:\Users\Rog G Strix\Desktop\deneme\chromedriver.exe"
+
+        self.driver = webdriver.Chrome(
+            service=Service(driver_path),
+            options=options
+        )
+
+        self.wait = WebDriverWait(self.driver, 10)
         start_url = f"https://www.local.ch/de/s/{self.keyword}?what={self.keyword}"
         yield scrapy.Request(url=start_url, callback=self.parse)
 
